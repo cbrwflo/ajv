@@ -7,6 +7,7 @@ import options from "./ajv_options"
 import {afterError, afterEach} from "./after_test"
 import ajvFormats from "ajv-formats"
 import draft6MetaSchema = require("../dist/refs/json-schema-draft-06.json")
+import addMetaSchema2020 from "../dist/refs/json-schema-2020-12"
 import {toHash} from "../dist/compile/util"
 import chai from "./chai"
 
@@ -30,6 +31,7 @@ const SKIP = {
   7: SKIP_DRAFT7,
   // TODO: 2 (of 32) tests in recursiveRef fail
   2019: ["recursiveRef", ...SKIP_DRAFT7],
+  2020: ["dynamicRef", "items", "uniqueItems", "unevaluatedItems", "prefixItems", "ref", ...SKIP_DRAFT7],
 }
 
 runTest(
@@ -64,12 +66,25 @@ runTest(
   require("./_json/draft2019")
 )
 
+runTest(
+  getAjvInstances(_Ajv2019, options, {
+    strict: false,
+    strictTypes: false,
+    formats: toHash(SKIP_FORMATS),
+  }),
+  2020,
+  require("./_json/draft2020")
+)
+
 function runTest(instances, draft: number, tests) {
   for (const ajv of instances) {
     ajv.opts.code.source = true
     if (draft === 6) {
       ajv.addMetaSchema(draft6MetaSchema)
       ajv.opts.defaultMeta = "http://json-schema.org/draft-06/schema#"
+    } else if (draft === 2020) {
+      addMetaSchema2020.call(ajv)
+      ajv.opts.defaultMeta = "https://json-schema.org/draft/2020-12/schema"
     }
     for (const id in remoteRefs) ajv.addSchema(remoteRefs[id], id)
     ajvFormats(ajv)
